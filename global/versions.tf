@@ -18,6 +18,12 @@ terraform {
 }
 
 provider "aws" {
-  region  = "eu-west-2"
+  region  = var.aws_region
   profile = "terraform-devops-starter"
+
+  default_tags {
+    tags = merge(var.tags, {
+      Environment = var.environment
+    })
+  }
 }
