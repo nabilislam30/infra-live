@@ -14,3 +14,4 @@ plan.txt
 *.tfplan
 *.tfvars
 *.tfvars >> .gitignore.tfvars.example
+!*.tfvars.example
