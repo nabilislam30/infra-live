@@ -16,3 +16,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
 module "security_baseline" {
   source = "git::https://github.com/nabilislam30/infra-modules.git//security-baseline?ref=v1.0.0"
 }
+
+module "guardrails" {
+  source = "git::https://github.com/nabilislam30/infra-modules.git//guardrails?ref=v1.1.0"
+}
