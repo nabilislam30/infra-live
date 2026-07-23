@@ -18,5 +18,7 @@ module "security_baseline" {
 }
 
 module "guardrails" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//guardrails?ref=v1.1.0"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//guardrails?ref=v1.2.2"
+
+  developers_ro_role_name = "DevelopersRO"
 }
