@@ -20,3 +20,8 @@ variable "tags" {
     Project     = "DevOps-Starter"
   }
 }
+
+variable "alarm_email_endpoint" {
+  description = "Email address used for monitoring alerts."
+  type        = string
+}

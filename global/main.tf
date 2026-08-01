@@ -14,11 +14,21 @@ resource "aws_dynamodb_table" "terraform_locks" {
 }
 
 module "security_baseline" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//security-baseline?ref=v1.2.6"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//security-baseline?ref=v1.3.2"
 }
 
 module "guardrails" {
   source = "git::https://github.com/nabilislam30/infra-modules.git//guardrails?ref=v1.2.6"
 
   developers_ro_role_name = "DevelopersRO"
+}
+
+module "monitoring" {
+  source = "git::https://github.com/nabilislam30/infra-modules.git//monitoring?ref=v1.3.3"
+
+  project_name              = "devops-starter"
+  environment               = var.environment
+  cloudtrail_log_group_name = module.security_baseline.cloudtrail_log_group_name
+  alarm_email_endpoint      = var.alarm_email_endpoint
+  common_tags               = var.tags
 }
