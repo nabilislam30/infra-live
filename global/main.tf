@@ -32,3 +32,20 @@ module "monitoring" {
   alarm_email_endpoint      = var.alarm_email_endpoint
   common_tags               = var.tags
 }
+
+module "budgets" {
+  source = "git::https://github.com/nabilislam30/infra-modules.git//budgets?ref=v1.4.0"
+
+  budget_name        = "monthly-global-budget"
+  monthly_limit      = 100
+  notification_email = var.alarm_email_endpoint
+}
+
+module "anomaly_detection" {
+  source = "git::https://github.com/nabilislam30/infra-modules.git//anomaly-detection?ref=v1.4.0"
+
+  monitor_name       = "global-cost-monitor"
+  subscription_name  = "daily-cost-anomalies"
+  notification_email = var.alarm_email_endpoint
+  threshold_usd      = 10
+}
