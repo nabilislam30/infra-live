@@ -1,5 +1,16 @@
+data "terraform_remote_state" "global" {
+  backend = "s3"
+
+  config = {
+    bucket  = "fimatix-devops-starter-tfstate-442847318797"
+    key     = "global/terraform.tfstate"
+    region  = "eu-west-2"
+    encrypt = true
+  }
+}
+
 module "vpc" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//vpc?ref=v1.5.0"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//vpc?ref=v1.5.1"
 
   name       = "dev-vpc"
   aws_region = "eu-west-2"
@@ -31,6 +42,8 @@ module "vpc" {
   ]
 
   nat_gateway_strategy = "single"
+
+  flow_log_destination_arn = data.terraform_remote_state.global.outputs.cloudtrail_logs_bucket_arn
 
   common_tags = {
     Environment = "dev"
