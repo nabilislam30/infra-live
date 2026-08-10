@@ -1,4 +1,4 @@
-name: GitHub OIDC Test
+name: GitHub OIDC Terraform Test
 
 on:
   workflow_dispatch:
@@ -8,9 +8,13 @@ permissions:
   id-token: write
 
 jobs:
-  oidc-test:
-    name: Test AWS OIDC
+  oidc-terraform-test:
+    name: Test AWS OIDC Terraform
     runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: dev/vpc
 
     steps:
       - name: Checkout repository
@@ -24,3 +28,17 @@ jobs:
 
       - name: Verify AWS Identity
         run: aws sts get-caller-identity
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.8
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan
+        run: terraform plan -input=false -var-file="dev.tfvars"
