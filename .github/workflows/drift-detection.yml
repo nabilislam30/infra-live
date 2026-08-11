@@ -1,0 +1,73 @@
+name: Terraform Drift Detection
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 2 * * *"
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  drift-detection:
+    name: Detect Terraform Drift
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: dev/vpc
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: eu-west-2
+          role-to-assume: arn:aws:iam::442847318797:role/tf-deploy-dev
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.14.8
+
+      - name: Terraform Init
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      - name: Terraform Plan (Detect Drift)
+        id: plan
+        run: |
+          set +e
+
+          terraform plan \
+            -input=false \
+            -detailed-exitcode \
+            -out=tfplan
+
+          EXIT_CODE=$?
+
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+
+          if [ "$EXIT_CODE" -eq 1 ]; then
+            echo "Terraform plan failed."
+            exit 1
+          fi
+
+          if [ "$EXIT_CODE" -eq 2 ]; then
+            echo "Terraform drift detected!"
+            exit 2
+          fi
+
+          echo "No Terraform drift detected."
+
+      - name: Upload Terraform Plan
+        if: failure() && steps.plan.outputs.exit_code == '2'
+        uses: actions/upload-artifact@v4
+        with:
+          name: terraform-drift-plan
+          path: dev/vpc/tfplan
