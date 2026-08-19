@@ -168,7 +168,7 @@ module "compute_asg" {
   desired_capacity = 1
 
   application_port  = 80
-  health_check_path = "/"
+  health_check_path = "/health"
 
   enable_ssh = true
   key_name   = var.key_name
