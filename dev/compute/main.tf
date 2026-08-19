@@ -13,6 +13,34 @@ data "terraform_remote_state" "vpc" {
 }
 
 # -----------------------------------------------------------------------------
+# Golden AMI
+# -----------------------------------------------------------------------------
+
+data "aws_ami" "golden_ami" {
+  most_recent = true
+
+  owners = [
+    "self"
+  ]
+
+  filter {
+    name = "name"
+
+    values = [
+      "dev-golden-ami-*"
+    ]
+  }
+
+  filter {
+    name = "state"
+
+    values = [
+      "available"
+    ]
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Local Values
 # -----------------------------------------------------------------------------
 
@@ -69,26 +97,40 @@ module "ami_pipeline" {
   component_version = "1.0.0"
 
   component_document = <<-YAML
-    name: DevGoldenAMI
-    description: Build and harden the development Golden AMI.
-    schemaVersion: 1.0
+  name: DevGoldenAMI
+  description: Build and harden the development Golden AMI.
+  schemaVersion: 1.0
 
-    phases:
-      - name: build
-        steps:
-          - name: UpdateOperatingSystem
-            action: ExecuteBash
-            inputs:
-              commands:
-                - dnf upgrade -y
+  phases:
+    - name: build
+      steps:
+        - name: UpdateOperatingSystem
+          action: ExecuteBash
+          inputs:
+            commands:
+              - dnf upgrade -y
 
-          - name: EnableSSMAgent
-            action: ExecuteBash
-            inputs:
-              commands:
-                - systemctl enable amazon-ssm-agent
-                - systemctl start amazon-ssm-agent
-  YAML
+        - name: InstallWebServer
+          action: ExecuteBash
+          inputs:
+            commands:
+              - dnf install -y httpd
+              - echo "healthy" > /var/www/html/health
+
+        - name: EnableWebServer
+          action: ExecuteBash
+          inputs:
+            commands:
+              - systemctl enable httpd
+              - systemctl start httpd
+
+        - name: EnableSSMAgent
+          action: ExecuteBash
+          inputs:
+            commands:
+              - systemctl enable amazon-ssm-agent
+              - systemctl start amazon-ssm-agent
+YAML
 
   instance_type = "t3.micro"
 
@@ -99,6 +141,38 @@ module "ami_pipeline" {
   ]
 
   distribution_region = "eu-west-2"
+
+  common_tags = local.common_tags
+}
+
+# -----------------------------------------------------------------------------
+# Immutable Compute - ASG + ALB
+# -----------------------------------------------------------------------------
+
+module "compute_asg" {
+  source = "git::https://github.com/nabilislam30/infra-modules.git//compute-asg?ref=v1.8.1"
+
+  name = "dev"
+
+  vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
+
+  public_subnet_ids  = data.terraform_remote_state.vpc.outputs.public_subnet_ids
+  private_subnet_ids = data.terraform_remote_state.vpc.outputs.private_subnet_ids
+
+  ami_id = data.aws_ami.golden_ami.id
+
+  instance_type = "t3.micro"
+
+  min_size         = 1
+  max_size         = 2
+  desired_capacity = 1
+
+  application_port  = 80
+  health_check_path = "/"
+
+  enable_ssh = true
+  key_name   = var.key_name
+  my_ip      = var.my_ip
 
   common_tags = local.common_tags
 }

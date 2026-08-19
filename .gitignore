@@ -14,3 +14,4 @@ plan.txt
 *.tfplan
 *.tfvars
 !*.tfvars.example
+dev-phase6.pem
