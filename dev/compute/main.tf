@@ -150,14 +150,16 @@ YAML
 # -----------------------------------------------------------------------------
 
 module "compute_asg" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//compute-asg?ref=v1.8.1"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//compute-asg?ref=v1.8.3"
 
   name = "dev"
 
   vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
   public_subnet_ids  = data.terraform_remote_state.vpc.outputs.public_subnet_ids
-  private_subnet_ids = data.terraform_remote_state.vpc.outputs.private_subnet_ids
+  compute_subnet_ids = data.terraform_remote_state.vpc.outputs.public_subnet_ids
+
+  associate_public_ip_address = true
 
   ami_id = data.aws_ami.golden_ami.id
 

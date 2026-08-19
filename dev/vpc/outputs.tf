@@ -24,3 +24,12 @@ output "private_subnet_ids" {
   description = "IDs of the development private subnets."
   value       = module.vpc.private_subnet_ids
 }
+
+# -----------------------------------------------------------------------------
+# Database Subnets
+# -----------------------------------------------------------------------------
+
+output "database_subnet_ids" {
+  description = "IDs of the development database subnets."
+  value       = module.vpc.database_subnet_ids
+}
