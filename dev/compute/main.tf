@@ -13,6 +13,20 @@ data "terraform_remote_state" "vpc" {
 }
 
 # -----------------------------------------------------------------------------
+# Database Remote State
+# -----------------------------------------------------------------------------
+
+data "terraform_remote_state" "database" {
+  backend = "s3"
+
+  config = {
+    bucket = "fimatix-devops-starter-tfstate-442847318797"
+    key    = "dev/database/terraform.tfstate"
+    region = "eu-west-2"
+  }
+}
+
+# -----------------------------------------------------------------------------
 # Golden AMI
 # -----------------------------------------------------------------------------
 
@@ -150,14 +164,16 @@ YAML
 # -----------------------------------------------------------------------------
 
 module "compute_asg" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//compute-asg?ref=v1.8.3"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//compute-asg?ref=v1.8.6"
 
   name = "dev"
 
   vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
-  public_subnet_ids  = data.terraform_remote_state.vpc.outputs.public_subnet_ids
-  compute_subnet_ids = data.terraform_remote_state.vpc.outputs.public_subnet_ids
+  public_subnet_ids          = data.terraform_remote_state.vpc.outputs.public_subnet_ids
+  compute_subnet_ids         = data.terraform_remote_state.vpc.outputs.public_subnet_ids
+  database_security_group_id = data.terraform_remote_state.database.outputs.database_security_group_id
+  database_secret_arn        = data.terraform_remote_state.database.outputs.master_user_secret_arn
 
   associate_public_ip_address = true
 
