@@ -164,16 +164,17 @@ YAML
 # -----------------------------------------------------------------------------
 
 module "compute_asg" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//compute-asg?ref=v1.8.6"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//compute-asg?ref=v1.8.7"
 
   name = "dev"
 
   vpc_id = data.terraform_remote_state.vpc.outputs.vpc_id
 
-  public_subnet_ids          = data.terraform_remote_state.vpc.outputs.public_subnet_ids
-  compute_subnet_ids         = data.terraform_remote_state.vpc.outputs.public_subnet_ids
-  database_security_group_id = data.terraform_remote_state.database.outputs.database_security_group_id
-  database_secret_arn        = data.terraform_remote_state.database.outputs.master_user_secret_arn
+  public_subnet_ids           = data.terraform_remote_state.vpc.outputs.public_subnet_ids
+  compute_subnet_ids          = data.terraform_remote_state.vpc.outputs.public_subnet_ids
+  database_security_group_id  = data.terraform_remote_state.database.outputs.database_security_group_id
+  database_secret_arn         = data.terraform_remote_state.database.outputs.master_user_secret_arn
+  database_secret_kms_key_arn = "arn:aws:kms:eu-west-2:442847318797:key/fa6d6768-bf0d-4af6-85b7-82aeda12f969"
 
   associate_public_ip_address = true
 
