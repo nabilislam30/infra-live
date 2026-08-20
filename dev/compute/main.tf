@@ -108,7 +108,7 @@ module "ami_pipeline" {
   parent_image = "ssm:/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
 
   recipe_version    = "1.0.0"
-  component_version = "1.0.0"
+  component_version = "1.0.1"
 
   component_document = <<-YAML
   name: DevGoldenAMI
@@ -124,11 +124,11 @@ module "ami_pipeline" {
             commands:
               - dnf upgrade -y
 
-        - name: InstallWebServer
+        - name: InstallApplicationPackages
           action: ExecuteBash
           inputs:
             commands:
-              - dnf install -y httpd
+              - dnf install -y httpd postgresql15
               - echo "healthy" > /var/www/html/health
 
         - name: EnableWebServer
