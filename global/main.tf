@@ -18,12 +18,12 @@ module "security_baseline" {
 }
 
 module "guardrails" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//guardrails?ref=v1.2.7"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//guardrails?ref=v1.8.9"
 
   developers_ro_role_name = "DevelopersRO"
 }
 module "iam_roles" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//iam-roles?ref=v1.8.8"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//iam-roles?ref=v1.8.9"
 
   dev_permission_boundary_policy_arn     = module.guardrails.dev_deployment_permission_boundary_policy_arn
   staging_permission_boundary_policy_arn = module.guardrails.staging_deployment_permission_boundary_policy_arn
