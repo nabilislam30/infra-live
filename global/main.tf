@@ -23,7 +23,7 @@ module "guardrails" {
   developers_ro_role_name = "DevelopersRO"
 }
 module "iam_roles" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//iam-roles?ref=v1.8.10"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//iam-roles?ref=v1.8.12"
 
   dev_permission_boundary_policy_arn     = module.guardrails.dev_deployment_permission_boundary_policy_arn
   staging_permission_boundary_policy_arn = module.guardrails.staging_deployment_permission_boundary_policy_arn
