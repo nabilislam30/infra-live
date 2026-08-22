@@ -36,8 +36,10 @@ jobs:
       # Checkout
       # -----------------------------------------------------------------------
 
-      - name: Checkout repository
+      - name: Checkout reviewed commit
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
 
       # -----------------------------------------------------------------------
       # AWS Authentication - GitHub OIDC
