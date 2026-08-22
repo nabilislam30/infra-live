@@ -101,7 +101,7 @@ resource "aws_vpc_security_group_egress_rule" "image_builder" {
 # -----------------------------------------------------------------------------
 
 module "ami_pipeline" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//ami-pipeline?ref=v1.7.1"
+  source = "git::https://github.com/nabilislam30/infra-modules.git//ami-pipeline?ref=v1.8.11"
 
   name = "dev"
 
