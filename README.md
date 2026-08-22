@@ -2,25 +2,27 @@
 
 > Live Terraform configuration for immutable AWS infrastructure.
 
-`infra-live` contains the **environment-specific Terraform configuration** used to deploy infrastructure into AWS. Rather than containing reusable infrastructure code, this repository consumes **versioned Terraform modules** from the companion **infra-modules** repository and deploys them into live AWS environments.
+`infra-live` contains the environment-specific Terraform configuration used to deploy AWS infrastructure. Reusable infrastructure code is maintained in the companion `infra-modules` repository and consumed here through version-pinned module releases.
 
 ---
 
 # 📖 Overview
 
-This repository represents the **live state** of the AWS estate.
+This repository represents the live deployment layer of the project.
 
-Each directory represents a deployable environment or account-level configuration. All infrastructure is managed using Terraform and follows Infrastructure as Code (IaC) best practices.
+The implementation is built around:
 
-The project is designed around:
-
-* Immutable Infrastructure
-* Infrastructure as Code (Terraform)
-* Reusable Terraform modules
-* Remote Terraform state
-* Version-pinned module releases
-* Least privilege security
-* AWS security best practices
+- Immutable Infrastructure
+- Infrastructure as Code with Terraform
+- Versioned reusable modules
+- Remote Terraform state and locking
+- GitHub Actions CI/CD
+- GitHub OIDC authentication to AWS
+- Least-privilege IAM deployment roles
+- Pull request plan review
+- Immutable saved Terraform plans
+- Production approval protection
+- Automated drift detection
 
 ---
 
@@ -42,8 +44,13 @@ infra-live/
 │   └── database/
 │
 ├── staging/
+│   └── vpc/
 │
 ├── prod/
+│   └── vpc/
+│
+├── .github/
+│   └── workflows/
 │
 ├── .gitignore
 ├── .pre-commit-config.yaml
@@ -52,275 +59,294 @@ infra-live/
 
 ---
 
-# 🚀 Project Goals
+# 🌎 Deployment Status
 
-This repository aims to provide a fully reproducible AWS platform by separating:
+| Scope | Current deployment | Status |
+| --- | --- | --- |
+| Global | Security baseline, guardrails, IAM roles, monitoring and cost controls | ✅ Complete |
+| Development | VPC, compute, golden AMI pipeline and PostgreSQL database | ✅ Complete |
+| Staging | VPC | ✅ Complete |
+| Production | VPC | ✅ Complete |
+| CI/CD | PR plans, reviewed saved-plan applies, OIDC and production approval | ✅ Complete |
+| Drift Detection | Nightly and manual checks across deployed components | ✅ Complete |
 
-* Live infrastructure configuration
-* Reusable Terraform modules
-* Remote state management
-* Environment-specific deployments
-
-This allows infrastructure to be promoted safely between environments while keeping reusable code isolated from deployment configuration.
-
----
-
-# 🌎 Environments
-
-| Environment | Purpose                      | Status         |
-| ----------- | ---------------------------- | -------------- |
-| Global      | Account-wide shared services | ✅ Complete     |
-| Development | Development workloads        | 🚧 In Progress |
-| Staging     | Pre-production validation    | 📅 Planned     |
-| Production  | Production workloads         | 📅 Planned     |
+Staging and production currently contain VPC deployments only. Additional application workloads can be added later without changing the established pipeline pattern.
 
 ---
 
-# 🔐 Current Global Infrastructure
+# 🔐 Global Infrastructure
 
-The **Global** deployment provisions account-wide security and governance services.
+The global deployment provides shared account-level governance and security services, including:
 
-Current resources include:
-
-* ✅ AWS CloudTrail
-* ✅ AWS Config
-* ✅ AWS Config Managed Rules
-* ✅ Amazon GuardDuty
-* ✅ AWS Security Hub
-* ✅ IAM Access Analyzer
-* ✅ Default EBS Encryption
-* ✅ S3 Account Public Access Block
-* ✅ CloudWatch Log Group
-* ✅ Customer Managed KMS Key
-* ✅ CloudTrail Log Storage
-* ✅ AWS Config Delivery Bucket
+- AWS CloudTrail
+- AWS Config and managed rules
+- Amazon GuardDuty
+- AWS Security Hub
+- IAM Access Analyzer
+- Default EBS encryption
+- S3 account public access protection
+- CloudWatch logging
+- Customer-managed KMS encryption
+- IAM deployment roles and permission boundaries
+- Terraform backend access controls
+- Monitoring and cost controls
 
 ---
 
 # 🧩 Terraform Module Architecture
 
-This repository consumes reusable modules from the companion repository:
+Reusable infrastructure is maintained separately in `infra-modules` and consumed using immutable Git tags.
 
 ```text
 infra-live
-        │
-        ▼
-infra-modules
-        │
-        ▼
+    │
+    ▼
+version-pinned infra-modules releases
+    │
+    ▼
 Terraform
-        │
-        ▼
+    │
+    ▼
 AWS
 ```
 
-Current module:
+Example:
 
 ```hcl
-module "security_baseline" {
-  source = "git::https://github.com/nabilislam30/infra-modules.git//security-baseline?ref=v0.9.0"
+module "iam_roles" {
+  source = "git::https://github.com/nabilislam30/infra-modules.git//iam-roles?ref=v1.8.13"
 }
 ```
 
-Using Git tags ensures every deployment is reproducible and avoids accidental breaking changes.
+Pinning module versions makes deployments reproducible and prevents unreviewed module changes from reaching live environments.
 
 ---
 
 # ☁ AWS Deployment Target
 
-| Setting         | Value         |
-| --------------- | ------------- |
-| AWS Account     | 442847318797  |
-| Region          | eu-west-2     |
-| Deployment Tool | Terraform     |
-| Module Source   | infra-modules |
+| Setting | Value |
+| --- | --- |
+| AWS Account | `442847318797` |
+| Primary Region | `eu-west-2` |
+| Infrastructure Tool | Terraform |
+| Module Repository | `infra-modules` |
+| CI/CD | GitHub Actions |
+| AWS Authentication | GitHub OIDC |
 
 ---
 
 # 💾 Remote State
 
-Terraform state is stored remotely using Amazon S3.
+Terraform state is stored remotely in S3 and protected with state locking.
 
 ```text
-Bucket:
+S3 bucket:
 fimatix-devops-starter-tfstate-442847318797
-```
 
-State locking is provided by DynamoDB.
-
-```text
-Table:
+DynamoDB lock table:
 terraform-state-locks
 ```
 
-State files are separated by environment.
-
-Example:
+State is separated by environment and component, for example:
 
 ```text
 global/terraform.tfstate
-
 dev/vpc/terraform.tfstate
-
+dev/database/terraform.tfstate
 dev/compute/terraform.tfstate
-
+staging/vpc/terraform.tfstate
 prod/vpc/terraform.tfstate
 ```
 
 ---
 
-# ⚙ Deployment Workflow
+# ⚙ CI/CD Workflow
 
-The deployment workflow follows a standard Terraform lifecycle.
+Infrastructure changes follow a reviewed and immutable deployment path.
 
 ```text
-Developer
-
-        │
-
-        ▼
-
-Git Commit
-
-        │
-
-        ▼
-
-infra-live
-
-        │
-
-        ▼
-
-Terraform Init
-
-        │
-
-        ▼
-
-Terraform Plan
-
-        │
-
-        ▼
-
-Terraform Apply
-
-        │
-
-        ▼
-
-AWS
+Feature branch
+    │
+    ▼
+Pull Request
+    │
+    ├── terraform fmt
+    ├── terraform validate
+    ├── TFLint
+    ├── Trivy IaC scan
+    └── Terraform plan
+    │
+    ▼
+Plan published to PR + saved as artifact
+    │
+    ▼
+Review and merge
+    │
+    ▼
+Download exact reviewed plan artifact
+    │
+    ▼
+Terraform apply saved plan
 ```
+
+The apply workflows do not generate a new plan. They download and apply the exact plan produced during pull request review.
+
+For production, a GitHub Environment named `prod` provides an explicit approval checkpoint before the reviewed production plan is applied.
+
+---
+
+# 🔑 GitHub OIDC and IAM
+
+GitHub Actions authenticates to AWS through OIDC rather than long-lived AWS access keys.
+
+Environment deployment roles include:
+
+```text
+tf-deploy-dev
+tf-deploy-staging
+tf-deploy-prod
+```
+
+Production pull requests use a separate read-oriented planning identity:
+
+```text
+tf-plan-prod
+```
+
+This keeps production planning separate from the production deployment role and preserves the main-branch trust restriction for production writes.
+
+---
+
+# 🔍 Drift Detection
+
+Terraform drift detection runs every night and can also be started manually from GitHub Actions.
+
+The matrix currently checks:
+
+```text
+dev-vpc
+dev-database
+dev-compute
+staging-vpc
+prod-vpc
+```
+
+Terraform `-detailed-exitcode` is used so the workflow can distinguish between:
+
+- `0` — no drift
+- `1` — Terraform error
+- `2` — infrastructure drift detected
+
+A detected drift plan is retained as a GitHub Actions artifact for investigation.
+
+---
+
+# 🧪 Validation and Security Gates
+
+The CI workflows use:
+
+- Terraform Format
+- Terraform Validate
+- TFLint
+- Trivy IaC scanning
+- Terraform plan review
+- Immutable plan artifacts
+- GitHub OIDC
+- Environment-specific AWS IAM roles
+- Production deployment approval
+- Scheduled drift detection
+
+Trivy is used as the repository-standard IaC security scanner.
 
 ---
 
 # 🚀 Deployment
 
-Initialise Terraform
+Normal infrastructure changes should be deployed through GitHub Actions rather than by manually applying from a workstation.
+
+For local validation only:
 
 ```bash
 terraform init
-```
-
-Review the execution plan
-
-```bash
+terraform validate
 terraform plan
 ```
 
-Deploy infrastructure
-
-```bash
-terraform apply
-```
-
-Destroy infrastructure (where appropriate)
-
-```bash
-terraform destroy
-```
+Manual live mutation should be avoided so Terraform and version control remain the authoritative write path.
 
 ---
 
-# 🔍 Validation
+# ✅ Phase 7 Completion
 
-Infrastructure is validated before deployment using:
+Phase 7 established the full CI/CD and operational control pattern for the components currently deployed in this repository.
 
-* Terraform Validate
-* Terraform Fmt
-* TFLint
-* Trivy
-* Terraform Docs
-* Git Pre-Commit Hooks
+Completed outcomes include:
 
-This helps maintain consistent code quality across all environments.
+- Dev VPC PR plan and reviewed-plan apply
+- Dev database PR plan and reviewed-plan apply
+- Dev compute PR plan and reviewed-plan apply
+- Staging VPC PR plan and reviewed-plan apply
+- Production VPC PR plan using `tf-plan-prod`
+- Production environment approval before apply
+- Exact PR-head checkout for reviewed plans
+- Immutable saved Terraform plan artifacts
+- GitHub OIDC authentication
+- Environment-specific backend permissions
+- Nightly multi-component Terraform drift detection
+- Successful manual drift verification across all five deployed components
 
----
-
-# 🔒 Security
-
-The repository follows several security best practices.
-
-* Infrastructure managed exclusively through Terraform
-* Remote state locking
-* Versioned modules
-* Least privilege IAM
-* KMS encryption
-* AWS Config compliance monitoring
-* CloudTrail audit logging
-* GuardDuty threat detection
-* Security Hub posture management
-* IAM Access Analyzer
-
----
-
-# 📂 Related Repository
-
-Reusable infrastructure modules are maintained separately.
-
-**Repository**
-
-```text
-infra-modules
-```
-
-This repository contains reusable Terraform modules that are consumed by `infra-live`.
+See [`PHASE7_EVIDENCE.md`](PHASE7_EVIDENCE.md) for the completion evidence summary.
 
 ---
 
 # 🗺 Roadmap
 
-Completed
+## Completed
 
-* ✅ Remote Terraform State
-* ✅ Global Security Baseline
-* ✅ AWS Config
-* ✅ CloudTrail
-* ✅ GuardDuty
-* ✅ Security Hub
-* ✅ IAM Access Analyzer
-* ✅ EBS Encryption by Default
+- ✅ Remote Terraform state and locking
+- ✅ Global security baseline
+- ✅ Account guardrails
+- ✅ Monitoring and cost controls
+- ✅ Reusable VPC module deployments
+- ✅ Golden AMI pipeline
+- ✅ Development Auto Scaling and ALB compute
+- ✅ Development PostgreSQL RDS
+- ✅ GitHub OIDC deployment roles
+- ✅ PR-based Terraform validation and planning
+- ✅ Immutable reviewed-plan deployment
+- ✅ Production approval protection
+- ✅ Automated Terraform drift detection
 
-Planned
+## Future Extensions
 
-* 🔲 VPC Module
-* 🔲 Compute Module
-* 🔲 Database Module
-* 🔲 Monitoring Module
-* 🔲 CI/CD Deployment Pipeline
-* 🔲 Automated Testing
-* 🔲 Multi-Account Support
+- Staging compute and database workloads
+- Production compute and database workloads
+- Additional application delivery pipelines
+- AWS IAM Identity Center integration when organisation prerequisites are available
+
+---
+
+# 📂 Related Repository
+
+Reusable Terraform modules are maintained in the companion repository:
+
+```text
+infra-modules
+```
+
+The live repository consumes versioned releases from that repository rather than duplicating reusable resource definitions.
 
 ---
 
 # 🤝 Contributing
 
 1. Create a feature branch.
-2. Implement infrastructure changes.
-3. Run validation checks.
-4. Open a Pull Request.
-5. Obtain approval before merging.
+2. Implement the Terraform change.
+3. Run local validation where appropriate.
+4. Open a pull request.
+5. Review the generated Terraform plan.
+6. Merge only after the plan is understood and approved.
+7. Allow the apply workflow to deploy the reviewed saved plan.
 
 ---
 
